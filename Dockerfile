@@ -1,4 +1,3 @@
-```dockerfile
 # Base image más ligera
 FROM python:3.11-slim
 
@@ -21,11 +20,16 @@ COPY setup.py .
 COPY src/ ./src/
 COPY examples/phone-chatbot/ ./examples/phone-chatbot/
 
-# Instalar dependencias con pip
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -e .
-RUN pip install --no-cache-dir -r examples/phone-chatbot/requirements.txt
-RUN pip install --no-cache-dir gunicorn
+# Crear y activar entorno virtual
+RUN python -m venv venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Instalar dependencias en el entorno virtual
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir -r examples/phone-chatbot/requirements.txt && \
+    pip install --no-cache-dir gunicorn
 
 # Variables de entorno
 ENV PYTHONUNBUFFERED=1
