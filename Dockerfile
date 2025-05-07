@@ -32,4 +32,4 @@ ENV PORT=8000
 EXPOSE 8000
 
 # Comando para ejecutar el bot telefónico
-CMD ["gunicorn", "--workers=1", "--log-level", "debug", "--chdir", "/app/pipecat/examples/phone-chatbot", "--capture-output", "bot_runner:app", "--bind=0.0.0.0:8000"]
+CMD ["uvicorn", "bot_runner:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "/app/pipecat/examples/phone-chatbot"]
