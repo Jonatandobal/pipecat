@@ -1,39 +1,38 @@
-# setup
-FROM python:3.11.5
+```dockerfile
+# Base image más ligera
+FROM python:3.11-slim
 
+# Directorio de trabajo
 WORKDIR /app
-COPY requirements.txt /app
-COPY *.py /app
-COPY pyproject.toml /app
 
-COPY src/ /app/src/
-COPY examples/ /app/examples/
+# Instalar solo las dependencias esenciales del sistema
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-RUN ls --recursive /app/
-RUN pip3 install --upgrade -r requirements.txt
-RUN python -m build .
-RUN pip3 install .
-RUN pip3 install gunicorn
-# If running on Ubuntu, Azure TTS requires some extra config
-# https://learn.microsoft.com/en-us/azure/ai-services/speech-service/quickstarts/setup-platform?pivots=programming-language-python&tabs=linux%2Cubuntu%2Cdotnetcli%2Cdotnet%2Cjre%2Cmaven%2Cnodejs%2Cmac%2Cpypi
+# Copiar solo los archivos necesarios
+COPY requirements.txt .
+COPY pyproject.toml .
+COPY setup.py .
+COPY src/ ./src/
+COPY examples/phone-chatbot/ ./examples/phone-chatbot/
 
-RUN wget -O - https://www.openssl.org/source/openssl-1.1.1w.tar.gz | tar zxf -
-WORKDIR openssl-1.1.1w
-RUN ./config --prefix=/usr/local
-RUN make -j $(nproc)
-RUN make install_sw install_ssldirs
-RUN ldconfig -v
-ENV SSL_CERT_DIR=/etc/ssl/certs
+# Instalar dependencias con pip
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -r examples/phone-chatbot/requirements.txt
+RUN pip install --no-cache-dir gunicorn
 
-#ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-RUN apt clean
-RUN apt-get update
-RUN apt-get -y install build-essential libssl-dev ca-certificates libasound2 wget
-
+# Variables de entorno
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
-WORKDIR /app
-
+# Exponer puerto
 EXPOSE 8000
-# runCMD ["gunicorn", "--workers=2", "--log-level", "debug", "--chdir", "examples/phone-chatbot", "--capture-output", "bot_runner:app", "--bind=0.0.0.0:8000"]
+
+# Comando para ejecutar el bot telefónico
+CMD ["gunicorn", "--workers=1", "--log-level", "debug", "--chdir", "examples/phone-chatbot", "--capture-output", "bot_runner:app", "--bind=0.0.0.0:8000"]
